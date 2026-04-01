@@ -4,10 +4,11 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+
     dotfiles = {
-	  url = "github:andikon/dotfiles";
-	  flake = false;
-	};
+      url = "github:andikon/dotfiles";
+      flake = false;
+    };
   };
 
   outputs = { self, nixpkgs, flake-utils, dotfiles }:
@@ -28,50 +29,60 @@
           fish
         ];
 
-        linuxOnly = with pkgs; [
-          xclip
-        ];
+        linuxOnly = with pkgs; [ xclip ];
 
         darwinOnly = with pkgs; [
           karabiner-elements
-          # mac-specific tools if needed
         ];
 
-        packages =
+        packagesList =
           commonPackages
           ++ lib.optionals pkgs.stdenv.isLinux linuxOnly
           ++ lib.optionals pkgs.stdenv.isDarwin darwinOnly;
 
-      in {
-        packages.default = pkgs.buildEnv {
+        userPackages = pkgs.buildEnv {
           name = "user-packages";
-          paths = packages;
+          paths = packagesList;
         };
 
-        # devContainer: linux-only OCI image built with Nix's dockerTools
-        devContainer = lib.optionalAttrs pkgs.stdenv.isLinux (pkgs.dockerTools.buildImage {
-          name = "dev-env";
-          tag = "dev-env:latest";
+      in
+      {
+        # normal package output
+        packages.default = userPackages;
 
-          # Include the user-packages buildEnv so tools are available in the image
-          contents = [ (pkgs.buildEnv { name = "user-packages"; paths = packages; }) pkgs.bash pkgs.fish ];
+        # ✅ Docker image must live under packages.*
+        packages.devContainer =
+          if pkgs.stdenv.isLinux then
+            pkgs.dockerTools.buildImage {
+			  name = "dev-env";
+			  tag = "latest";
 
-          # Copy selected linux dotfiles from a `dotfiles` directory in the repo (add as submodule if needed)
-          extraCommands = ''
-            mkdir -p $out/root/.config/nvim
-            mkdir -p $out/root/.config/fish
-            # Copy files from the dotfiles flake input (declarative, pinned via flake input)
-            cp -r ${toString dotfiles}/nvim $out/root/.config/nvim || true
-            cp -r ${toString dotfiles}/fish $out/root/.config/fish || true
-            cp ${toString dotfiles}/.tmux.conf $out/root/.tmux.conf || true
-            cp ${toString dotfiles}/git/.gitconfig $out/root/.gitconfig || true
-            cp -r ${toString dotfiles}/scripts $out/root/scripts || true
-          '';
+			  copyToRoot = pkgs.buildEnv {
+				name = "image-root";
+				paths = [
+				  userPackages
+				  pkgs.bash
+				  pkgs.fish
+				];
+			  };
 
-          config = {
-            Cmd = ["fish"];
-            Env = [ "SHELL=/bin/fish" ];
-          };
-        });
+			  extraCommands = ''
+				mkdir -p $out/root/.config/nvim
+				mkdir -p $out/root/.config/fish
+
+				cp -r ${dotfiles}/nvim $out/root/.config/nvim || true
+				cp -r ${dotfiles}/fish $out/root/.config/fish || true
+				cp ${dotfiles}/.tmux.conf $out/root/.tmux.conf || true
+				cp ${dotfiles}/git/.gitconfig $out/root/.gitconfig || true
+				cp -r ${dotfiles}/scripts $out/root/scripts || true
+			  '';
+
+			  config = {
+				Cmd = [ "fish" ];
+				Env = [ "SHELL=/bin/fish" ];
+			  };
+			}
+          else
+            throw "devContainer only supported on Linux";
       });
 }
