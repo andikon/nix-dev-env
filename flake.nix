@@ -19,8 +19,7 @@
         lib = pkgs.lib;
 
         commonPackages = with pkgs; [
-          neovim
-          ghostty-bin
+          neovim          
           tmux
           git
           ripgrep
@@ -29,10 +28,14 @@
           fish
         ];
 
-        linuxOnly = with pkgs; [ xclip ];
+        linuxOnly = with pkgs; [ 
+			xclip 
+			ghostty
+		];
 
         darwinOnly = with pkgs; [
           karabiner-elements
+		  ghostty-bin
         ];
 
         packagesList =
