@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "dotfiles": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1775026469,
+        "narHash": "sha256-z8nbb35hBuZbbcv5vmHJ6JNdrQ2C3X8G4aN+La0Xb24=",
+        "owner": "andikon",
+        "repo": "dotfiles",
+        "rev": "51dba5d093e89dff637177606807ba2b55e0b044",
+        "type": "github"
+      },
+      "original": {
+        "owner": "andikon",
+        "repo": "dotfiles",
+        "type": "github"
+      }
+    },
     "flake-utils": {
       "inputs": {
         "systems": "systems"
@@ -36,6 +52,7 @@
     },
     "root": {
       "inputs": {
+        "dotfiles": "dotfiles",
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs"
       }

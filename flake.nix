@@ -4,7 +4,10 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    dotfiles.url = "github:andikon/dotfiles";
+    dotfiles = {
+	  url = "github:andikon/dotfiles";
+	  flake = false;
+	};
   };
 
   outputs = { self, nixpkgs, flake-utils, dotfiles }:
