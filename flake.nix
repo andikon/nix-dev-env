@@ -1,165 +1,116 @@
 {
-  description = "Cross-platform dev environment";
+  description = "Docker Dev Environment with Chezmoi Subfolder";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
     nix2container.url = "github:nlewo/nix2container";
-
+    
     dotfiles = {
       url = "github:andikon/dotfiles";
       flake = false;
     };
-    chezmoi = {
-      url = "github:twpayne/chezmoi";
-      flake = false;
-    };
   };
 
-  outputs = { self, nixpkgs, flake-utils, nix2container, dotfiles, chezmoi }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs = { self, nixpkgs, nix2container, dotfiles }:
+    let
+      system = "x86_64-linux"; 
+      pkgs = import nixpkgs { inherit system; };
+      n2c = nix2container.packages.${system}.nix2container;
 
-      let
-        pkgs = nixpkgs.legacyPackages.${system};
-        lib = pkgs.lib;
-        n2c = nix2container.packages.${system}.nix2container;
+      # Define these as basic types (string/int) explicitly
+      user = "dev";
+      uid = 1000;
+      gid = 1000;
 
-        # ------------------------
-        # Packages
-        # ------------------------
+      containerPkgs = with pkgs; [
+        bashInteractive
+        fish
+        git
+        neovim
+        tmux
+        ripgrep
+        fd
+        fzf
+        sudo
+        coreutils
+        shadow
+        chezmoi
+      ];
 
-        commonPackages = with pkgs; [
-          chezmoi
-          neovim
-          tmux
-          git
-          ripgrep
-          fd
-          fzf
-          fish
+      userHome = pkgs.runCommand "user-home" { } ''
+        # Create destination
+        mkdir -p $out/home/${user}/.local/share/chezmoi
+        
+        # Copy the 'dotfiles' subfolder from your repo
+        cp -r ${dotfiles}/dotfiles/. $out/home/${user}/.local/share/chezmoi/
+        
+        # Apply dotfiles at build time using a temporary HOME
+        export HOME=$(mktemp -d)
+        ${pkgs.chezmoi}/bin/chezmoi apply \
+          --destination $out/home/${user} \
+          --source $out/home/${user}/.local/share/chezmoi \
+          --no-pager \
+          --force || true
+        
+        # Create user/group files
+        mkdir -p $out/etc
+        echo "${user}:x:${toString uid}:${toString gid}::/home/${user}:${pkgs.fish}/bin/fish" > $out/etc/passwd
+        echo "${user}:x:${toString gid}:" > $out/etc/group
+
+        # Sudoers
+        mkdir -p $out/etc/sudoers.d
+        echo "${user} ALL=(ALL) NOPASSWD: ALL" > $out/etc/sudoers.d/${user}
+      '';
+
+      # Define the image here to avoid recursive 'self' issues
+      devImage = n2c.buildImage {
+        name = "andrijkoenig/nix-dev-env";
+        tag = "latest";
+
+        copyToRoot = [
+          (pkgs.buildEnv {
+            name = "root-env";
+            paths = containerPkgs;
+            pathsToLink = [ "/bin" "/etc" ];
+          })
+          userHome
         ];
 
-        linuxOnly = with pkgs; [
-          xclip
-          ghostty
+        perms = [
+          {
+            path = userHome;
+            regex = "/home/${user}";
+            mode = "0755";
+            uid = uid;
+            gid = gid;
+          }
+          {
+            path = userHome;
+            regex = "/etc/sudoers.d/${user}";
+            mode = "0440";
+            uid = 0;
+            gid = 0;
+          }
         ];
 
-        darwinOnly = with pkgs; [
-          karabiner-elements
-          ghostty-bin
-        ];
-
-        packagesList =
-          commonPackages
-          ++ lib.optionals pkgs.stdenv.isLinux linuxOnly
-          ++ lib.optionals pkgs.stdenv.isDarwin darwinOnly;
-
-        # user environment
-        userEnv = pkgs.buildEnv {
-          name = "user-env";
-          paths = packagesList;
-        };
-
-        # ------------------------
-        # Container root FS
-        # ------------------------
-
-        # Add basic utilities and dotfiles for the image
-        imageRoot = pkgs.buildEnv {
-          name = "image-root";
-          paths = [
-            userEnv
-            pkgs.bash
-            pkgs.fish
-            pkgs.sudo         # Add sudo for privilege escalation
-            pkgs.shadow       # user/group tools if needed
-            pkgs.coreutils    # mkdir, rm, cp, etc
-            pkgs.util-linux   # uname
-            pkgs.findutils    # find
-            pkgs.gnugrep      # grep
-            pkgs.gnused       # sed
-            pkgs.gawk         # awk
+        config = {
+          Cmd = [ "${pkgs.fish}/bin/fish" ];
+          User = "${user}";
+          WorkingDir = "/home/${user}";
+          Env = [
+            "HOME=/home/${user}"
+            "USER=${user}"
+            "TERM=xterm-256color"
+            "SHELL=${pkgs.fish}/bin/fish"
           ];
         };
+      };
 
-        # Create sudoers file for passwordless sudo
-        sudoersFile = pkgs.writeText "sudoers-dev" ''
-          dev ALL=(ALL) NOPASSWD: ALL
-        '';
-
-        # Create an overlay derivation containing /home/dev and /etc entries
-        imageOverlay = pkgs.runCommand "image-overlay" { } ''
-          mkdir -p $out/home/dev/.local/share/chezmoi
-          mkdir -p $out/etc
-          # create sudoers.d with mode 0555 to match common package layout (avoid graph mode conflicts)
-          mkdir -m 0555 $out/etc/sudoers.d || true
-
-          # Copy dotfiles source for dev user
-          cp -r ${dotfiles}/dotfiles/* $out/home/dev/.local/share/chezmoi/ || true
-
-          # Initialize chezmoi and apply
-          export HOME=$out/home/dev
-          mkdir -p $HOME/.config/chezmoi
-          ${pkgs.chezmoi}/bin/chezmoi --source=$HOME/.local/share/chezmoi init --apply --no-pager 2>/dev/null || true
-
-          # Create /etc/passwd and /etc/group with dev and root entries
-          cat > $out/etc/passwd <<EOF
-          root:x:0:0:root:/root:/bin/sh
-          dev:x:1000:1000:dev:/home/dev:${pkgs.fish}/bin/fish
-          EOF
-
-          cat > $out/etc/group <<EOF
-          root:x:0:
-          wheel:x:10:dev
-          EOF
-
-          # Create /etc/shadow entries (locked)
-          umask 077
-          cat > $out/etc/shadow <<EOF
-          root:!:18500:0:99999:7:::
-          dev:!:18500:0:99999:7:::
-          EOF
-          chmod 0400 $out/etc/shadow
-
-          # Write sudoers file
-          cp ${sudoersFile} $out/etc/sudoers.d/dev
-          chmod 0440 $out/etc/sudoers.d/dev
-
-          # Note: avoid chown in build sandbox (some filesystems don't support it)
-        '';
-
-        # ------------------------
-        # nix2container image
-        # ------------------------
-
-        devContainer =
-          n2c.buildImage {
-            name = "docker.io/andrijkoenig/nix-dev-env";
-            tag = "latest";
-
-            # Use the combined root FS (base environment + overlay)
-            copyToRoot = [ imageRoot imageOverlay ];
-
-            config = {
-              Cmd = [ "${pkgs.fish}/bin/fish" ];
-              Env = [ "SHELL=${pkgs.fish}/bin/fish" ];
-              WorkingDir = "/home/dev";
-              User = "dev";
-            };
-          };
-
-      in
-      {
-        packages = lib.optionalAttrs pkgs.stdenv.isLinux {
-          default = userEnv;
-          devContainer = devContainer;
-        };
-
-        devShells.default = pkgs.mkShell {
-          packages = packagesList;
-          shellHook = ''
-            exec ${pkgs.fish}/bin/fish
-          '';
-        };
-      });
+    in {
+      # Now map the defined image to the output attributes
+      packages.${system} = {
+        devContainer = devImage;
+        default = devImage;
+      };
+    };
 }

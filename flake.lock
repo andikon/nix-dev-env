@@ -1,21 +1,5 @@
 {
   "nodes": {
-    "chezmoi": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1774896503,
-        "narHash": "sha256-rwsjPTua1xV5Gcf5C8CDFlvk2CpW/CAEfawN66uA9nI=",
-        "owner": "twpayne",
-        "repo": "chezmoi",
-        "rev": "4b909dc1e3394e5f98063068f37764911efd864e",
-        "type": "github"
-      },
-      "original": {
-        "owner": "twpayne",
-        "repo": "chezmoi",
-        "type": "github"
-      }
-    },
     "dotfiles": {
       "flake": false,
       "locked": {
@@ -29,24 +13,6 @@
       "original": {
         "owner": "andikon",
         "repo": "dotfiles",
-        "type": "github"
-      }
-    },
-    "flake-utils": {
-      "inputs": {
-        "systems": "systems"
-      },
-      "locked": {
-        "lastModified": 1731533236,
-        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
-        "owner": "numtide",
-        "repo": "flake-utils",
-        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "numtide",
-        "repo": "flake-utils",
         "type": "github"
       }
     },
@@ -101,26 +67,9 @@
     },
     "root": {
       "inputs": {
-        "chezmoi": "chezmoi",
         "dotfiles": "dotfiles",
-        "flake-utils": "flake-utils",
         "nix2container": "nix2container",
         "nixpkgs": "nixpkgs_2"
-      }
-    },
-    "systems": {
-      "locked": {
-        "lastModified": 1681028828,
-        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
-        "owner": "nix-systems",
-        "repo": "default",
-        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nix-systems",
-        "repo": "default",
-        "type": "github"
       }
     }
   },
