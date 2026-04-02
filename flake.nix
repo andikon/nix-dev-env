@@ -10,9 +10,13 @@
       url = "github:andikon/dotfiles";
       flake = false;
     };
+    chezmoi = {
+      url = "github:twpayne/chezmoi";
+      flake = false;
+    };
   };
 
-  outputs = { self, nixpkgs, flake-utils, nix2container, dotfiles }:
+  outputs = { self, nixpkgs, flake-utils, nix2container, dotfiles, chezmoi }:
     flake-utils.lib.eachDefaultSystem (system:
 
       let
@@ -25,6 +29,7 @@
         # ------------------------
 
         commonPackages = with pkgs; [
+          chezmoi
           neovim
           tmux
           git
@@ -72,15 +77,21 @@
             pkgs.gnugrep      # grep
             pkgs.gnused       # sed
             pkgs.gawk         # awk
-          ] ++ [ dotfiles ];  # copy dotfiles into /nix/store/imageRoot/dotfiles
+          ];
         };
 
-        # Wrap dotfiles copy to /root inside container
+        # Use chezmoi to apply dotfiles in container
         imageRootWithDotfiles = pkgs.runCommand "dotfiles-root" { } ''
           mkdir -p $out/root
-          cp -r ${dotfiles}/* $out/root/
-          # Merge with previous imageRoot
+          # Copy base environment
           cp -r ${imageRoot}/* $out/
+          # Copy dotfiles source
+          mkdir -p $out/root/.local/share/chezmoi
+          cp -r ${dotfiles}/dotfiles/* $out/root/.local/share/chezmoi/
+          # Initialize chezmoi and apply
+          export HOME=$out/root
+          mkdir -p $HOME/.config/chezmoi
+          ${pkgs.chezmoi}/bin/chezmoi --source=$HOME/.local/share/chezmoi init --apply --no-pager 2>/dev/null || true
         '';
 
         # ------------------------
