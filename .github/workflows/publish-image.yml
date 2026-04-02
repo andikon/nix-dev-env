@@ -19,9 +19,6 @@ jobs:
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
-
-      - name: Nix collect garbage
-        run: nix-collect-garbage -d || true
       
       - name: Build dev image with nix
         run: |
@@ -33,8 +30,5 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Load image and push to Docker Hub
-        run: |
-          docker load < result
-          docker tag dev-env:latest ${{ secrets.DOCKERHUB_USERNAME }}/dev-env:latest
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/dev-env:latest
+      - name: Push image (nix2container)
+        run: nix run .#devContainer.copyToRegistry

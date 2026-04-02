@@ -74,7 +74,7 @@
 
         devContainer =
           n2c.buildImage {
-            name = "dev-env-${system}";
+            name = "docker.io/andrijkoenig/nix-dev-env";
             tag = "latest";
 
             copyToRoot = imageRoot;
