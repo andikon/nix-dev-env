@@ -72,6 +72,7 @@
             pkgs.bash
             pkgs.fish
             pkgs.sudo         # Add sudo for privilege escalation
+            pkgs.shadow       # user/group tools if needed
             pkgs.coreutils    # mkdir, rm, cp, etc
             pkgs.util-linux   # uname
             pkgs.findutils    # find
@@ -118,22 +119,31 @@
             # Use the combined root FS
             copyToRoot = imageRootWithDotfiles;
 
-            # Declaratively configure users
-            users.options = {
-              dev = {
-                uid = 1000;
-                gid = 1000;
-                home = "/home/dev";
-                shell = "${pkgs.fish}/bin/fish";
-                groups = [ "wheel" ];
-              };
-            };
-
-            # Add sudoers configuration
+            # Add user and sudoers via extraCommands (compatible with this n2c version)
             extraCommands = ''
+              mkdir -p home/dev
+
+              # ensure wheel group exists (gid 10)
+              if ! grep -q '^wheel:' etc/group 2>/dev/null; then
+                echo 'wheel:x:10:' >> etc/group
+              fi
+
+              # add dev user to /etc/passwd (uid/gid 1000)
+              if ! grep -q '^dev:' etc/passwd 2>/dev/null; then
+                echo 'dev:x:1000:1000:dev:/home/dev:${pkgs.fish}/bin/fish' >> etc/passwd
+              fi
+
+              # create shadow entry to disable password for dev
+              if [ ! -f etc/shadow ] || ! grep -q '^dev:' etc/shadow 2>/dev/null; then
+                umask 077
+                echo 'dev:!:18500:0:99999:7:::' >> etc/shadow
+              fi
+
               mkdir -p etc/sudoers.d
               cp ${sudoersFile} etc/sudoers.d/dev
               chmod 0440 etc/sudoers.d/dev
+
+              chown -R 1000:1000 home/dev
             '';
 
             config = {
