@@ -57,7 +57,7 @@
         packages.devContainer =
           if pkgs.stdenv.isLinux then
             pkgs.dockerTools.buildImage {
-			  name = "dev-env";
+			  name = "dev-env-${builtins.substring 0 8 imageRoot.drvHash}";
 			  tag = "latest";
 
 			  copyToRoot = pkgs.buildEnv {
