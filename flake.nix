@@ -124,8 +124,7 @@
           cp ${sudoersFile} $out/etc/sudoers.d/dev
           chmod 0440 $out/etc/sudoers.d/dev
 
-          # Set proper permissions
-          chown -R 1000:1000 $out/home/dev
+          # Note: avoid chown in build sandbox (some filesystems don't support it)
         '';
 
         # ------------------------
