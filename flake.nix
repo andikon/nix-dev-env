@@ -82,16 +82,29 @@
 
         # Use chezmoi to apply dotfiles in container
         imageRootWithDotfiles = pkgs.runCommand "dotfiles-root" { } ''
-          mkdir -p $out/root
+          mkdir -p $out/home/dev
+          mkdir -p $out/etc
+          
           # Copy base environment
           cp -r ${imageRoot}/* $out/
-          # Copy dotfiles source
-          mkdir -p $out/root/.local/share/chezmoi
-          cp -r ${dotfiles}/dotfiles/* $out/root/.local/share/chezmoi/
+          
+          # Add sudo support
+          cp ${pkgs.sudo}/bin/sudo $out/bin/
+          mkdir -p $out/etc/sudoers.d
+          echo "dev ALL=(ALL) NOPASSWD: ALL" > $out/etc/sudoers.d/dev
+          chmod 0440 $out/etc/sudoers.d/dev
+          
+          # Copy dotfiles source for dev user
+          mkdir -p $out/home/dev/.local/share/chezmoi
+          cp -r ${dotfiles}/dotfiles/* $out/home/dev/.local/share/chezmoi/
+          
           # Initialize chezmoi and apply
-          export HOME=$out/root
+          export HOME=$out/home/dev
           mkdir -p $HOME/.config/chezmoi
           ${pkgs.chezmoi}/bin/chezmoi --source=$HOME/.local/share/chezmoi init --apply --no-pager 2>/dev/null || true
+          
+          # Set proper permissions
+          chown -R 1000:1000 $out/home/dev
         '';
 
         # ------------------------
@@ -109,7 +122,8 @@
             config = {
               Cmd = [ "${pkgs.fish}/bin/fish" ];
               Env = [ "SHELL=${pkgs.fish}/bin/fish" ];
-              WorkingDir = "/root";
+              WorkingDir = "/home/dev";
+              User = "dev";
             };
           };
 
