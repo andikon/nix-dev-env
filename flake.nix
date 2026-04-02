@@ -82,29 +82,50 @@
           ];
         };
 
-        # Use chezmoi to apply dotfiles in container
-        imageRootWithDotfiles = pkgs.runCommand "dotfiles-root" { } ''
-          mkdir -p $out/home/dev
-          
-          # Copy base environment
-          cp -r ${imageRoot}/* $out/
-          
-          # Copy dotfiles source for dev user
+        # Create sudoers file for passwordless sudo
+        sudoersFile = pkgs.writeText "sudoers-dev" ''
+          dev ALL=(ALL) NOPASSWD: ALL
+        '';
+
+        # Create an overlay derivation containing /home/dev and /etc entries
+        imageOverlay = pkgs.runCommand "image-overlay" { } ''
           mkdir -p $out/home/dev/.local/share/chezmoi
-          cp -r ${dotfiles}/dotfiles/* $out/home/dev/.local/share/chezmoi/
-          
+          mkdir -p $out/etc/sudoers.d
+          mkdir -p $out/etc
+
+          # Copy dotfiles source for dev user
+          cp -r ${dotfiles}/dotfiles/* $out/home/dev/.local/share/chezmoi/ || true
+
           # Initialize chezmoi and apply
           export HOME=$out/home/dev
           mkdir -p $HOME/.config/chezmoi
           ${pkgs.chezmoi}/bin/chezmoi --source=$HOME/.local/share/chezmoi init --apply --no-pager 2>/dev/null || true
-          
+
+          # Create /etc/passwd and /etc/group with dev and root entries
+          cat > $out/etc/passwd <<EOF
+          root:x:0:0:root:/root:/bin/sh
+          dev:x:1000:1000:dev:/home/dev:${pkgs.fish}/bin/fish
+          EOF
+
+          cat > $out/etc/group <<EOF
+          root:x:0:
+          wheel:x:10:dev
+          EOF
+
+          # Create /etc/shadow entries (locked)
+          umask 077
+          cat > $out/etc/shadow <<EOF
+          root:!:18500:0:99999:7:::
+          dev:!:18500:0:99999:7:::
+          EOF
+          chmod 0400 $out/etc/shadow
+
+          # Write sudoers file
+          cp ${sudoersFile} $out/etc/sudoers.d/dev
+          chmod 0440 $out/etc/sudoers.d/dev
+
           # Set proper permissions
           chown -R 1000:1000 $out/home/dev
-        '';
-
-        # Create sudoers file for passwordless sudo
-        sudoersFile = pkgs.writeText "sudoers-dev" ''
-          dev ALL=(ALL) NOPASSWD: ALL
         '';
 
         # ------------------------
@@ -116,35 +137,8 @@
             name = "docker.io/andrijkoenig/nix-dev-env";
             tag = "latest";
 
-            # Use the combined root FS
-            copyToRoot = imageRootWithDotfiles;
-
-            # Add user and sudoers via extraCommands (compatible with this n2c version)
-            extraCommands = ''
-              mkdir -p home/dev
-
-              # ensure wheel group exists (gid 10)
-              if ! grep -q '^wheel:' etc/group 2>/dev/null; then
-                echo 'wheel:x:10:' >> etc/group
-              fi
-
-              # add dev user to /etc/passwd (uid/gid 1000)
-              if ! grep -q '^dev:' etc/passwd 2>/dev/null; then
-                echo 'dev:x:1000:1000:dev:/home/dev:${pkgs.fish}/bin/fish' >> etc/passwd
-              fi
-
-              # create shadow entry to disable password for dev
-              if [ ! -f etc/shadow ] || ! grep -q '^dev:' etc/shadow 2>/dev/null; then
-                umask 077
-                echo 'dev:!:18500:0:99999:7:::' >> etc/shadow
-              fi
-
-              mkdir -p etc/sudoers.d
-              cp ${sudoersFile} etc/sudoers.d/dev
-              chmod 0440 etc/sudoers.d/dev
-
-              chown -R 1000:1000 home/dev
-            '';
+            # Use the combined root FS (base environment + overlay)
+            copyToRoot = [ imageRoot imageOverlay ];
 
             config = {
               Cmd = [ "${pkgs.fish}/bin/fish" ];
