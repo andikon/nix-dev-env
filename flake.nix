@@ -90,8 +90,9 @@
         # Create an overlay derivation containing /home/dev and /etc entries
         imageOverlay = pkgs.runCommand "image-overlay" { } ''
           mkdir -p $out/home/dev/.local/share/chezmoi
-          mkdir -p $out/etc/sudoers.d
           mkdir -p $out/etc
+          # create sudoers.d with mode 0555 to match common package layout (avoid graph mode conflicts)
+          mkdir -m 0555 $out/etc/sudoers.d || true
 
           # Copy dotfiles source for dev user
           cp -r ${dotfiles}/dotfiles/* $out/home/dev/.local/share/chezmoi/ || true
