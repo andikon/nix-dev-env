@@ -1,34 +1,45 @@
-name: Build and publish dev image
+name: Build and Publish Dev Container
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches: [ "main" ]
+  workflow_dispatch: # Allows manual triggering from the GitHub UI
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    env:
-      IMAGE_NAME: dev-env
-
+    
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Install Nix
         uses: cachix/install-nix-action@v27
         with:
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-      
-      - name: Build dev image with nix
-        run: |
-          nix build .#devContainer
+          nix_path: nixpkgs=channel:nixos-unstable
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
+      - name: Build Docker Image with Nix
+        run: nix build .#
+
+      - name: Load Image into Docker
+        run: |
+          # `nix build` outputs a symlink named `result` pointing to the tarball
+          docker load -i result
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Push image (nix2container)
-        run: nix run .#devContainer.copyToRegistry
+      - name: Tag and Push Docker Image
+        run: |
+          # The image name built by Nix matches the `name` attribute in the flake.
+          # Change "andikon" below to your actual Docker Hub username if different.
+          DOCKER_REPO="${{ secrets.DOCKERHUB_USERNAME }}/dev-env"
+          
+          docker tag andikon-dev-env:latest $DOCKER_REPO:latest
+          docker tag andikon-dev-env:latest $DOCKER_REPO:${{ github.sha }}
+          
+          docker push $DOCKER_REPO:latest
+          docker push $DOCKER_REPO:${{ github.sha }}
