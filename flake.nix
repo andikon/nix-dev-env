@@ -1,9 +1,10 @@
 {
-  description = "Cross-platform user packages for my DEV enviroment";
+  description = "Cross-platform dev environment";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    nix2container.url = "github:nlewo/nix2container";
 
     dotfiles = {
       url = "github:andikon/dotfiles";
@@ -11,15 +12,20 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, dotfiles }:
+  outputs = { self, nixpkgs, flake-utils, nix2container, dotfiles }:
     flake-utils.lib.eachDefaultSystem (system:
 
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
+        n2c = nix2container.packages.${system}.nix2container;
+
+        # ------------------------
+        # Packages
+        # ------------------------
 
         commonPackages = with pkgs; [
-          neovim          
+          neovim
           tmux
           git
           ripgrep
@@ -28,14 +34,14 @@
           fish
         ];
 
-        linuxOnly = with pkgs; [ 
-			xclip 
-			ghostty
-		];
+        linuxOnly = with pkgs; [
+          xclip
+          ghostty
+        ];
 
         darwinOnly = with pkgs; [
           karabiner-elements
-		  ghostty-bin
+          ghostty-bin
         ];
 
         packagesList =
@@ -43,49 +49,58 @@
           ++ lib.optionals pkgs.stdenv.isLinux linuxOnly
           ++ lib.optionals pkgs.stdenv.isDarwin darwinOnly;
 
-        userPackages = pkgs.buildEnv {
-          name = "user-packages";
+        # user environment
+        userEnv = pkgs.buildEnv {
+          name = "user-env";
           paths = packagesList;
         };
 
+        # ------------------------
+        # Container root FS
+        # ------------------------
+
+        imageRoot = pkgs.buildEnv {
+          name = "image-root";
+          paths = [
+            userEnv
+            pkgs.bash
+            pkgs.fish
+          ];
+        };
+
+        # ------------------------
+        # nix2container image
+        # ------------------------
+
+        devContainer =
+          n2c.buildImage {
+            name = "dev-env-${system}";
+            tag = "latest";
+
+            copyToRoot = imageRoot;
+
+            config = {
+              Cmd = [ "${pkgs.fish}/bin/fish" ];
+              Env = [ "SHELL=${pkgs.fish}/bin/fish" ];
+              WorkingDir = "/root";
+            };
+          };
+
       in
       {
-        # normal package output
-        packages.default = userPackages;
+        packages =
+          {
+            default = userEnv;
+          }
+          // lib.optionalAttrs pkgs.stdenv.isLinux {
+            devContainer = devContainer;
+          };
 
-        # ✅ Docker image must live under packages.*
-        packages.devContainer =
-          if pkgs.stdenv.isLinux then
-            pkgs.dockerTools.buildImage {
-			  name = "dev-env-${builtins.substring 0 8 imageRoot.drvHash}";
-			  tag = "latest";
-
-			  copyToRoot = pkgs.buildEnv {
-				name = "image-root";
-				paths = [
-				  userPackages
-				  pkgs.bash
-				  pkgs.fish
-				];
-			  };
-
-			  extraCommands = ''
-				mkdir -p $out/root/.config/nvim
-				mkdir -p $out/root/.config/fish
-
-				cp -r ${dotfiles}/nvim $out/root/.config/nvim || true
-				cp -r ${dotfiles}/fish $out/root/.config/fish || true
-				cp ${dotfiles}/.tmux.conf $out/root/.tmux.conf || true
-				cp ${dotfiles}/git/.gitconfig $out/root/.gitconfig || true
-				cp -r ${dotfiles}/scripts $out/root/scripts || true
-			  '';
-
-			  config = {
-				Cmd = [ "fish" ];
-				Env = [ "SHELL=/bin/fish" ];
-			  };
-			}
-          else
-            throw "devContainer only supported on Linux";
+        devShells.default = pkgs.mkShell {
+          packages = packagesList;
+          shellHook = ''
+            exec ${pkgs.fish}/bin/fish
+          '';
+        };
       });
 }
