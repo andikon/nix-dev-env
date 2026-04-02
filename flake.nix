@@ -84,14 +84,9 @@
         # Use chezmoi to apply dotfiles in container
         imageRootWithDotfiles = pkgs.runCommand "dotfiles-root" { } ''
           mkdir -p $out/home/dev
-          mkdir -p $out/etc/sudoers.d
           
           # Copy base environment
           cp -r ${imageRoot}/* $out/
-          
-          # Create sudoers file for dev user (passwordless sudo)
-          echo "dev ALL=(ALL) NOPASSWD: ALL" > $out/etc/sudoers.d/dev
-          chmod 0440 $out/etc/sudoers.d/dev
           
           # Copy dotfiles source for dev user
           mkdir -p $out/home/dev/.local/share/chezmoi
@@ -106,6 +101,11 @@
           chown -R 1000:1000 $out/home/dev
         '';
 
+        # Create sudoers file for passwordless sudo
+        sudoersFile = pkgs.writeText "sudoers-dev" ''
+          dev ALL=(ALL) NOPASSWD: ALL
+        '';
+
         # ------------------------
         # nix2container image
         # ------------------------
@@ -117,6 +117,24 @@
 
             # Use the combined root FS
             copyToRoot = imageRootWithDotfiles;
+
+            # Declaratively configure users
+            users.options = {
+              dev = {
+                uid = 1000;
+                gid = 1000;
+                home = "/home/dev";
+                shell = "${pkgs.fish}/bin/fish";
+                groups = [ "wheel" ];
+              };
+            };
+
+            # Add sudoers configuration
+            extraCommands = ''
+              mkdir -p etc/sudoers.d
+              cp ${sudoersFile} etc/sudoers.d/dev
+              chmod 0440 etc/sudoers.d/dev
+            '';
 
             config = {
               Cmd = [ "${pkgs.fish}/bin/fish" ];
