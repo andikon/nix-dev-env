@@ -71,6 +71,7 @@
             userEnv
             pkgs.bash
             pkgs.fish
+            pkgs.sudo         # Add sudo for privilege escalation
             pkgs.coreutils    # mkdir, rm, cp, etc
             pkgs.util-linux   # uname
             pkgs.findutils    # find
@@ -83,14 +84,12 @@
         # Use chezmoi to apply dotfiles in container
         imageRootWithDotfiles = pkgs.runCommand "dotfiles-root" { } ''
           mkdir -p $out/home/dev
-          mkdir -p $out/etc
+          mkdir -p $out/etc/sudoers.d
           
           # Copy base environment
           cp -r ${imageRoot}/* $out/
           
-          # Add sudo support
-          cp ${pkgs.sudo}/bin/sudo $out/bin/
-          mkdir -p $out/etc/sudoers.d
+          # Create sudoers file for dev user (passwordless sudo)
           echo "dev ALL=(ALL) NOPASSWD: ALL" > $out/etc/sudoers.d/dev
           chmod 0440 $out/etc/sudoers.d/dev
           
