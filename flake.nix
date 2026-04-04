@@ -11,7 +11,7 @@
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
 	  
-	  home = dotfiles.homeConfigurations.dev@docker.activationPackage;
+	  home = dotfiles.homeConfigurations."dev@docker".activationPackage;
     in {
       packages.${system}.dev-docker = pkgs.dockerTools.buildLayeredImage  {
         name = "nix-dev-env";
