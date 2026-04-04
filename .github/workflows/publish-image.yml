@@ -19,7 +19,7 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Build Docker Image with Nix
-        run: nix build .#
+        run: nix build .#dev-docker
 
       - name: Load Image into Docker
         run: |
