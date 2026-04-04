@@ -28,7 +28,7 @@
           typescript-language-server
         ];
 
-        runAsRoot = ''
+        fakeRootCommands = ''
           ${pkgs.dockerTools.shadowSetup}
           useradd -m -s ${pkgs.fish}/bin/fish dev
         '';
