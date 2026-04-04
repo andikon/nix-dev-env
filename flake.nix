@@ -23,6 +23,13 @@
 			  "dev:x:1000:"
 			];
 		  };
+   
+   # build a /home/dev tree as a derivation
+    devHome = pkgs.runCommand "dev-home" {} ''
+      mkdir -p $out/home/dev
+      #cp -r ${home}/home-files/. $out/home/dev/
+    '';
+	
     in {
       packages.${system}.dev-docker = pkgs.dockerTools.buildLayeredImage  {
         name = "nix-dev-env";
@@ -30,6 +37,7 @@
 		
 		contents = [
 		  home
+		  devHome
 		  fakeNssDev
 		] ++ (with pkgs; [
 		  coreutils  
@@ -47,21 +55,7 @@
           fish
           typescript-language-server
         ]);
-
-        extraCommands = ''
-          # create home directory
-          # mkdir -p home/dev
-
-          # install home-manager result
-          # cp -r ${home}/home-files/. home/dev/
-
-          # ownership by numeric uid/gid
-          # chown -R 1000:1000 home/dev
-
-          # fish expects /bin/sh
-          # mkdir -p bin
-          # ln -s ${pkgs.bash}/bin/bash bin/sh
-        '';
+        
 
         config = {
           User = "1000:1000";
