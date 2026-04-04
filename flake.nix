@@ -20,6 +20,11 @@
 		contents = [
 		  home
 		] ++ (with pkgs; [
+		  coreutils  
+		  busybox
+		  bash        
+		  gnugrep
+		  gnused
           neovim
           tmux
           git
@@ -33,6 +38,7 @@
 
         extraCommands = ''
 		  mkdir -p home/dev
+		  chown -R 1000:1000 home/dev
 		'';
 
         config = {
