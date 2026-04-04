@@ -29,7 +29,7 @@
           nodejs
           fish
           typescript-language-server
-        ];
+        ]);
 
         extraCommands = ''
 		  mkdir -p home/dev
