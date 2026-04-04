@@ -33,7 +33,6 @@
 
         extraCommands = ''
 		  mkdir -p home/dev
-		  cp -r ${home}/home-files/* home/dev/
 		'';
 
         config = {
