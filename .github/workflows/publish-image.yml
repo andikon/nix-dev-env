@@ -33,13 +33,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Tag and Push Docker Image
-        run: |
-          # The image name built by Nix matches the `name` attribute in the flake.
-          # Change "andikon" below to your actual Docker Hub username if different.
-          DOCKER_REPO="${{ secrets.DOCKERHUB_USERNAME }}/dev-env"
-          
-          docker tag andikon-dev-env:latest $DOCKER_REPO:latest
-          docker tag andikon-dev-env:latest $DOCKER_REPO:${{ github.sha }}
-          
+        run: |          
+          DOCKER_REPO="${{ secrets.DOCKERHUB_USERNAME }}/nix-dev-env"          
+          docker tag nix-dev-env:latest $DOCKER_REPO:latest          
           docker push $DOCKER_REPO:latest
-          docker push $DOCKER_REPO:${{ github.sha }}

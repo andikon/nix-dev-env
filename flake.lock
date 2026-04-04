@@ -1,13 +1,16 @@
 {
   "nodes": {
     "dotfiles": {
-      "flake": false,
+      "inputs": {
+        "home-manager": "home-manager",
+        "nixpkgs": "nixpkgs"
+      },
       "locked": {
-        "lastModified": 1775123683,
-        "narHash": "sha256-KcXTVXU+0q+I7d+btP8baczxZwI2x7m+Q+zQEL2sLv0=",
+        "lastModified": 1775222415,
+        "narHash": "sha256-TuUpVdwWlr5G14w7n7i6bJ748jabsN5VqJb7Ln5G4c8=",
         "owner": "andikon",
         "repo": "dotfiles",
-        "rev": "8adab915905c3e1551534ddb70aee254726c16ce",
+        "rev": "7f15d66b1c452afc53d1b3194d863f1f0b967230",
         "type": "github"
       },
       "original": {
@@ -16,17 +19,54 @@
         "type": "github"
       }
     },
+    "home-manager": {
+      "inputs": {
+        "nixpkgs": [
+          "dotfiles",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1775223910,
+        "narHash": "sha256-QRdehpSKTttlZe0oY2n5OCfZeCMrHkKNlWF1LJzO9tY=",
+        "owner": "nix-community",
+        "repo": "home-manager",
+        "rev": "f68887a4c11e662b0eb0323d34b3fb9506226719",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "home-manager",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1775036866,
         "narHash": "sha256-ZojAnPuCdy657PbTq5V0Y+AHKhZAIwSIT2cb8UgAz/U=",
-        "owner": "NixOS",
+        "owner": "nixos",
         "repo": "nixpkgs",
         "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
         "type": "github"
       },
       "original": {
-        "owner": "NixOS",
+        "owner": "nixos",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1775036866,
+        "narHash": "sha256-ZojAnPuCdy657PbTq5V0Y+AHKhZAIwSIT2cb8UgAz/U=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
         "ref": "nixos-unstable",
         "repo": "nixpkgs",
         "type": "github"
@@ -35,7 +75,7 @@
     "root": {
       "inputs": {
         "dotfiles": "dotfiles",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs_2"
       }
     }
   },
