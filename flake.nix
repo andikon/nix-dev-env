@@ -10,13 +10,16 @@
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
+	  
+	  home = dotfiles.homeConfigurations.dev@docker.activationPackage;
     in {
-      packages.${system}.dev-docker = pkgs.dockerTools.buildImage {
+      packages.${system}.dev-docker = pkgs.dockerTools.buildLayeredImage  {
         name = "nix-dev-env";
         tag = "latest";
-        fromImage = "docker://ubuntu:22.04";
-
-        contents = with pkgs; [
+		
+		contents = [
+		  home
+		] ++ (with pkgs; [
           neovim
           tmux
           git
@@ -28,13 +31,13 @@
           typescript-language-server
         ];
 
-        fakeRootCommands = ''
-          ${pkgs.dockerTools.shadowSetup}
-          useradd -m -s ${pkgs.fish}/bin/fish dev
-        '';
+        extraCommands = ''
+		  mkdir -p home/dev
+		  cp -r ${home}/home-files/* home/dev/
+		'';
 
         config = {
-          User = "dev";
+          User = "1000:1000";
           Cmd = [ "${pkgs.fish}/bin/fish" "-l" ];
           Env = [ "HOME=/home/dev" ];
           WorkingDir = "/home/dev";
