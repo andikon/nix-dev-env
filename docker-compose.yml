@@ -1,0 +1,9 @@
+services:
+  nix-dev:
+    image: andrijkoenig/nix-dev-env:latest
+    container_name: nix-dev-env
+    stdin_open: true  
+    tty: true
+    volumes:
+      - ~/projects:/home/dev/projects
+    working_dir: /home/dev
