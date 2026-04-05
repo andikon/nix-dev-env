@@ -25,3 +25,5 @@ jobs:
         with:
           file: ./Dockerfile
           push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/nix-dev-env:latest
