@@ -12,28 +12,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@v27
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
-
-      - name: Build Docker Image with Nix
-        run: nix build .#dev-docker
-
-      - name: Load Image into Docker
-        run: |
-          # `nix build` outputs a symlink named `result` pointing to the tarball
-          docker load -i result
-
+   
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Tag and Push Docker Image
-        run: |          
-          DOCKER_REPO="${{ secrets.DOCKERHUB_USERNAME }}/nix-dev-env"          
-          docker tag nix-dev-env:latest $DOCKER_REPO:latest          
-          docker push $DOCKER_REPO:latest
+     - name: Build and push Docker image
+        id: push
+        uses: docker/build-push-action@v7
+        with:
+          file: ./Dockerfile
+          push: true
