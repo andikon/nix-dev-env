@@ -19,16 +19,9 @@ RUN curl -sL https://nixos.org/nix/install | sh -s -- --no-daemon \
  && mkdir -p ~/.config/nix \
  && echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
 
-RUN cd /tmp && git clone https://github.com/andikon/dotfiles .dotfiles
-
-RUN cd /tmp/.dotfiles && \
-    . /home/dev/.nix-profile/etc/profile.d/nix.sh && \
-    nix build .#homeConfigurations.dev@docker.activationPackage && \
-    ./result/activate
+RUN nix profile install github:andikon/nix-config#cli-packages
 
 ENV PATH=/home/dev/.nix-profile/bin:$PATH
-
-RUN rm -rf /tmp/.dotfiles
 
 RUN sudo chsh -s /home/dev/.nix-profile/bin/fish dev
 WORKDIR /home/dev
