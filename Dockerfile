@@ -19,7 +19,7 @@ RUN curl -sL https://nixos.org/nix/install | sh -s -- --no-daemon \
  && mkdir -p ~/.config/nix \
  && echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
 
-RUN nix profile install github:andikon/nix-config#cli-packages
+RUN . /home/dev/.nix-profile/etc/profile.d/nix.sh && nix profile install github:andikon/nix-config#cli-packages
 
 ENV PATH=/home/dev/.nix-profile/bin:$PATH
 
