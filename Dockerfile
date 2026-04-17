@@ -44,5 +44,5 @@ WORKDIR /home/dev
 RUN nvim --headless "+Lazy! sync" +qa
 RUN nvim --headless ":TSUpdate all" +qa
 
-ENTRYPOINT ["/home/dev/.local/bin/entrypoint.sh"]
+ENTRYPOINT ["/home/dev/.local/bin/container_startup_script.sh"]
 CMD ["/home/dev/.nix-profile/bin/fish", "-l"]
