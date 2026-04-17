@@ -8,7 +8,8 @@ RUN apt-get update && apt-get install -y \
     curl \
 	build-essential \
     git \
-	sudo
+    sudo \
+    ca-certificates
 
 RUN useradd -m dev
 RUN echo "dev ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
@@ -23,8 +24,13 @@ ENV PATH=/home/dev/.nix-profile/bin:/nix/var/nix/profiles/default/bin:$PATH
 
 RUN nix --extra-experimental-features "nix-command flakes" \
     profile add github:andikon/nix-config#cli-packages
-
 ENV PATH=/home/dev/.nix-profile/bin:$PATH
+
+RUN git clone https://github.com/andikon/dotfiles.git ~/.dotfiles \
+    && cd ~/.dotfiles \
+    && stow -t ~ fish nvim scripts tmux
+
+RUN sudo chmod +x /home/dev/.local/bin/*
 
 RUN sudo chsh -s /home/dev/.nix-profile/bin/fish dev
 WORKDIR /home/dev
@@ -32,4 +38,5 @@ WORKDIR /home/dev
 RUN nvim --headless "+Lazy! sync" +qa
 RUN nvim --headless ":TSUpdate all" +qa
 
+ENTRYPOINT ["/home/dev/.local/bin/entrypoint.sh"]
 CMD ["/home/dev/.nix-profile/bin/fish", "-l"]
