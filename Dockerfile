@@ -4,7 +4,13 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV HOME=/home/dev 
 ENV USER=dev
 	
-RUN apt-get update && apt-get install -y \
+RUN rm -rf /etc/apt/sources.list /etc/apt/sources.list.d/* \
+ && printf "deb http://de.archive.ubuntu.com/ubuntu noble main restricted universe multiverse\n" > /etc/apt/sources.list \
+ && printf "deb http://de.archive.ubuntu.com/ubuntu noble-updates main restricted universe multiverse\n" >> /etc/apt/sources.list \
+ && printf "deb http://de.archive.ubuntu.com/ubuntu noble-security main restricted universe multiverse\n" >> /etc/apt/sources.list \
+ && apt-get update
+
+RUN apt-get install -y \
     curl \
 	build-essential \
     git \
