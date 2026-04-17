@@ -44,5 +44,8 @@ WORKDIR /home/dev
 RUN nvim --headless "+Lazy! sync" +qa
 RUN nvim --headless ":TSUpdate all" +qa
 
-ENTRYPOINT ["/home/dev/.local/bin/container_startup_script.sh"]
+# Execute the script using fish to ensure the environment is sourced
+ENTRYPOINT ["/home/dev/.nix-profile/bin/fish", "-c", "/home/dev/.local/bin/container_startup_script.sh"]
+
+# Default command to drop into a login shell if no other args are passed
 CMD ["/home/dev/.nix-profile/bin/fish", "-l"]
